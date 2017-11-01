@@ -1,30 +1,51 @@
-const validate = require('webpack-validator');
-const resolve = require('path').resolve;
+const webpack = require('webpack');
+const path = require('path');
 
-module.exports = env => {
-  return validate({
-    entry: ['babel-polyfill', './client/main.js'],
+const NODE_ENV = process.env.NODE_ENV
+
+if (NODE_ENV === 'production') {
+  module.exports = {
+    // If production, add Babel polyfies
+    entry: ['./client/main.js'],
     output: {
-      filename: 'bundle.js',
-      path: resolve(__dirname, 'dist'),
-      pathinfo: !env.prod,
+      path: path.resolve(__dirname, 'dist'),
+      filename: '[name].[hash].js'
     },
-    devServer: {
-      host: '0.0.0.0',
-      contentBase: 'dist',
-      noInfo: true,
-    },
-    devtool: env.prod ? 'source-map' : 'eval',
-    bail: env.prod,
+    devtool: 'source-map',
     module: {
-      loaders: [{
-        test: /\.jsx?$/,
-        loader: 'babel-loader',
-        exclude: /node_modules/,
-        query: {
-          presets: ['es2015', 'react']
+      rules: [
+        {
+          test: /\.jsx?$/,
+          exclude: /node_modules/,
+          loader: 'babel-loader'
         }
-      }]
-    }
-  });
+      ]
+    },
+    plugins: [
+      // Define globals in app
+      new webpack.DefinePlugin({
+        'process.env': {
+          NODE_ENV: JSON.stringify(process.env.NODE_ENV)
+        }
+      }),
+      new webpack.optimize.UglifyJsPlugin({
+        compress: {
+          warnings: false,
+          comparisons: false
+        },
+        mangle: {
+          safari10: true
+        },
+        output: {
+          comments: false,
+          ascii_only: true
+        },
+        sourceMap: true,
+      }),
+    ]
+  };
+} else if (NODE_ENV === 'development') {
+
+} else {
+  throw new Error('NODE_ENV not provided')
 }
